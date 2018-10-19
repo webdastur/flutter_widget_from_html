@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   flutter_widget_from_html_core:
     path: ./packages/core
+  flutter_youtube_player:
+    path: ./packages/youtube_player
   url_launcher: ^4.0.0
 
 dev_dependencies:

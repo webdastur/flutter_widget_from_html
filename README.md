@@ -48,4 +48,5 @@ This package has all the features of [`flutter_widget_from_html_core`](https://p
 - Renders IMG tag with [`CachedNetworkImage`](https://pub.dartlang.org/packages/cached_network_image) and padding (`Config.imagePadding`)
 - Renders lists (OL/UL) with marker and padding (`Config.listBullet`, `Config.listPaddingLeft`)
 - Renders texts with padding (`Config.textPadding`)
+- Renders YouTube video player with [`video_player`](https://pub.dartlang.org/packages/video_player) and the unofficial YouTube get_video_info API
 - Supports relative url (A href, IMG src)

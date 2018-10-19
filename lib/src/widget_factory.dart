@@ -2,12 +2,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart'
     as core;
+import 'package:flutter_youtube_player/flutter_youtube_player.dart';
+import 'package:html/dom.dart' as dom;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'config.dart';
 
 final _baseUriTrimmingRegExp = RegExp(r'/+$');
 final _isFullUrlRegExp = RegExp(r'^(https?://|mailto:|tel:)');
+final _youtubeEmbedRegExp = RegExp(r'youtube.com/embed/([^\?]+)(\?|$)');
 
 String buildFullUrl(String url, Uri baseUrl) {
   if (url?.isNotEmpty != true) return null;
@@ -124,6 +127,29 @@ class WidgetFactory extends core.WidgetFactory {
         super.buildTextWidget(text, textAlign: textAlign),
         config.textPadding,
       );
+
+  @override
+  core.NodeMetadata collectMetadata(dom.Element e) {
+    var meta = super.collectMetadata(e);
+
+    if (e.localName == 'iframe' && e.attributes.containsKey('src')) {
+      final iframeSrc = e.attributes['src'];
+      final match = _youtubeEmbedRegExp.firstMatch(iframeSrc);
+      if (match != null) {
+        final youtubeVideoId = match.group(1);
+        meta = core.lazySet(meta, isNotRenderable: false);
+        meta = core.lazyAddWidget(
+          meta,
+          wrapPadding(
+            YouTubePlayer(youtubeVideoId),
+            config.imagePadding,
+          ),
+        );
+      }
+    }
+
+    return meta;
+  }
 
   @override
   GestureTapCallback prepareGestureTapCallbackToLaunchUrl(String url) =>

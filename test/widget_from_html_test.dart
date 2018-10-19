@@ -90,4 +90,14 @@ void main() {
               '[Stack:children=[Padding:(0,0,0,30),child=[Text:Four]],[Positioned:child=[LayoutBuilder:built=[Text,align=right:4.]]]]]'));
     });
   });
+
+  testWidgets('renders YouTube player', (WidgetTester tester) async {
+    // https://developers.google.com/youtube/player_parameters
+    final html =
+        """<iframe id="ytplayer" type="text/html" width="640" height="360"
+  src="https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=1&origin=http://example.com"
+  frameborder="0"></iframe>""";
+    final explained = await explain(tester, html);
+    expect(explained, equals('[Padding:(10,0,0,0),child=[YouTubePlayer:]]'));
+  });
 }

@@ -66,6 +66,11 @@ class HomeScreen extends StatelessWidget {
 CODE tag:
 
 <code><span style="color: #000000"><span style="color: #0000BB">&lt;?php phpinfo</span><span style="color: #007700">(); </span><span style="color: #0000BB">?&gt;</span></span></code>""",
+    'YouTube':
+        """<iframe id="ytplayer" type="text/html" width="640" height="360"
+  src="https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=1&origin=http://example.com"
+  frameborder="0"></iframe>
+<div style="text-align: center">Source: <a href="https://developers.google.com/youtube/player_parameters">developers.google.com</a></div>"""
   };
 
   @override
