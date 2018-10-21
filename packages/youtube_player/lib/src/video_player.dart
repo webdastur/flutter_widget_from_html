@@ -4,8 +4,9 @@ import 'package:video_player/video_player.dart' as lib;
 
 class VideoPlayer extends StatefulWidget {
   final String url;
+  final VoidCallback onDismissed;
 
-  VideoPlayer(this.url);
+  VideoPlayer(this.url, {this.onDismissed});
 
   @override
   State<StatefulWidget> createState() => _VideoPlayerState();
@@ -51,6 +52,24 @@ class _VideoPlayerState extends State<VideoPlayer> {
           GestureDetector(
             child: lib.VideoPlayer(controller),
             onTap: _playOrPause,
+          ),
+          Align(
+            alignment: Alignment.topRight,
+            child: controller.value.isPlaying
+                ? null
+                : GestureDetector(
+                    child: Padding(
+                      padding: const EdgeInsets.all(5.0),
+                      child: Icon(
+                        Icons.close,
+                        color: Theme.of(context).accentColor.withOpacity(.5),
+                        size: 40.0,
+                      ),
+                    ),
+                    onTap: () => widget.onDismissed != null
+                        ? widget.onDismissed()
+                        : null,
+                  ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
@@ -137,7 +156,11 @@ class _IconAnimationState extends State<_IconAnimation>
   Widget build(BuildContext context) => animationController.isAnimating
       ? Opacity(
           opacity: 1.0 - animationController.value,
-          child: Icon(widget.icon, size: 100.0),
+          child: Icon(
+            widget.icon,
+            color: Theme.of(context).accentColor,
+            size: 100.0,
+          ),
         )
       : Container();
 }

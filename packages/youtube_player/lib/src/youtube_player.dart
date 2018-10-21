@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -23,12 +24,20 @@ class YouTubePlayer extends StatefulWidget {
 
 class _YouTubePlayerState extends State<YouTubePlayer> {
   double aspectRatio;
+  bool aspectRatioFromStream = false;
   bool hasCompletedFetching = false;
   bool isShowingVideoPlayer = false;
   _Stream stream;
   _Thumbnail thumbnail;
 
   _YouTubePlayerState({this.aspectRatio});
+
+  Widget get placeholder =>
+      const Center(child: const CircularProgressIndicator());
+
+  String get videoUrl => "https://youtu.be/${widget.videoId}";
+
+  Color get youtubeRed => const Color.fromRGBO(204, 24, 30, 1.0);
 
   @override
   void initState() {
@@ -37,45 +46,124 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
   }
 
   @override
-  Widget build(BuildContext context) => AspectRatio(
-        aspectRatio: aspectRatio,
-        child: isShowingVideoPlayer
-            ? VideoPlayer(stream.url)
-            : !hasCompletedFetching
-                ? const Center(child: const CircularProgressIndicator())
-                : thumbnail != null
-                    ? GestureDetector(
-                        child: CachedNetworkImage(
-                          imageUrl: thumbnail.url,
-                          fit: BoxFit.cover,
-                          placeholder:
-                              Center(child: CircularProgressIndicator()),
-                        ),
-                        onTap: _showVideoPlayerOrLaunchUrl,
-                      )
-                    : Container(height: 0.0, width: 0.0),
+  Widget build(BuildContext context) => Theme(
+        data: Theme.of(context).copyWith(
+          accentColor: youtubeRed,
+        ),
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: isShowingVideoPlayer
+              ? VideoPlayer(
+                  stream.url,
+                  onDismissed: () =>
+                      setState(() => isShowingVideoPlayer = false),
+                )
+              : !hasCompletedFetching
+                  ? placeholder
+                  : thumbnail != null ? _buildThumbnail() : null,
+        ),
       );
 
   void fetch() async {
-    // this is an unofficial YouTube api, it may die without notice
-    final url =
-        "http://www.youtube.com/get_video_info?html5=1&video_id=${widget.videoId}";
-    final response = await http.get(url);
-    if (response.statusCode != 200) {
-      setState(() => hasCompletedFetching = true);
+    // we are using an unofficial YouTube api, it may die without notice
+    await Future.wait([
+      http
+          .get('http://www.youtube.com/get_video_info?' +
+              "html5=1&video_id=${widget.videoId}")
+          .then(_fetchOnGetVideoInfo),
+      http.get(videoUrl).then(_fetchOnHtml),
+    ]);
+
+    if (mounted) setState(() => hasCompletedFetching = true);
+  }
+
+  void _actionLaunchUrl() async {
+    if (await canLaunch(videoUrl)) {
+      await launch(videoUrl);
+    }
+  }
+
+  void _actionShowVideoPlayerOrLaunchUrl() async {
+    if (stream != null) {
+      setState(() => isShowingVideoPlayer = true);
       return;
     }
 
-    final params = Uri.splitQueryString(response.body);
-    final parsedPlayerResponse = params.containsKey('player_response') &&
-        _parsePlayerResponse(params['player_response']);
+    _actionLaunchUrl();
+  }
 
-    if (!parsedPlayerResponse &&
-        params.containsKey('url_encoded_fmt_stream_map')) {
-      _parseStreamMap(params['url_encoded_fmt_stream_map']);
+  Widget _buildThumbnail() => GestureDetector(
+        child: Stack(
+          children: <Widget>[
+            CachedNetworkImage(
+              imageUrl: thumbnail.url,
+              fit: BoxFit.cover,
+              placeholder: placeholder,
+            ),
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, bc) => Icon(
+                      Icons.play_arrow,
+                      color: Theme.of(context).accentColor,
+                      size: min(bc.maxHeight, bc.maxWidth) / 2,
+                    ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      Expanded(
+                        child: GestureDetector(
+                          child: Text(
+                            videoUrl,
+                            style: DefaultTextStyle.of(context)
+                                .style
+                                .copyWith(color: youtubeRed),
+                          ),
+                          onTap: _actionLaunchUrl,
+                        ),
+                      ),
+                      Text(stream?.quality ?? ''),
+                    ],
+                  )),
+            ),
+          ],
+        ),
+        onTap: _actionShowVideoPlayerOrLaunchUrl,
+      );
+
+  void _fetchOnGetVideoInfo(http.Response response) {
+    if (!mounted) return;
+
+    final params = Uri.splitQueryString(response.body);
+    if (params.containsKey('player_response') &&
+        _parsePlayerResponse(params['player_response'])) {
+      return;
     }
 
-    setState(() => hasCompletedFetching = true);
+    if (params.containsKey('url_encoded_fmt_stream_map')) {
+      _parseStreamMap(params['url_encoded_fmt_stream_map']);
+    }
+  }
+
+  void _fetchOnHtml(http.Response response) {
+    if (!mounted) return;
+
+    final match = RegExp(r'<meta property="og:image" content="([^"]+)">')
+        .firstMatch(response.body);
+    if (match == null) return;
+
+    _setBestThumbnail(<_Thumbnail>[
+      _Thumbnail(
+        height: double.infinity,
+        url: match.group(1),
+        width: double.infinity,
+      )
+    ]);
   }
 
   bool _parsePlayerResponse(String playerResponse) {
@@ -126,9 +214,9 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
                 if (!thumbnail.containsKey('width')) continue;
 
                 newThumbnails.add(_Thumbnail(
-                  height: thumbnail['height'] as int,
+                  height: (thumbnail['height'] as int).toDouble(),
                   url: thumbnail['url'],
-                  width: thumbnail['width'] as int,
+                  width: (thumbnail['width'] as int).toDouble(),
                 ));
               }
             }
@@ -139,13 +227,7 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
 
     setState(() {
       _setBestStream(newStreams);
-
-      for (final newThumbnail in newThumbnails) {
-        if (thumbnail == null || thumbnail.width < newThumbnail.width) {
-          thumbnail = newThumbnail;
-          aspectRatio = thumbnail.width / thumbnail.height;
-        }
-      }
+      _setBestThumbnail(newThumbnails);
     });
 
     return newStreams.isNotEmpty;
@@ -163,7 +245,7 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
       }
 
       final streamType = params['type'];
-      if (!streamType.startsWith('video/')) {
+      if (!streamType.startsWith('video/mp4')) {
         continue;
       }
 
@@ -179,21 +261,32 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
 
   void _setBestStream(List<_Stream> list) {
     for (final _stream in list) {
+      print("Stream: ${_stream.type} ${_stream.quality}");
+
       if (stream == null || stream.width < _stream.width) {
         stream = _stream;
+
+        if (_stream.width > 0 && _stream.height > 0) {
+          aspectRatio = _stream.width / _stream.height;
+          aspectRatioFromStream = true;
+        }
       }
     }
   }
 
-  void _showVideoPlayerOrLaunchUrl() async {
-    if (stream != null) {
-      setState(() => isShowingVideoPlayer = true);
-      return;
-    }
+  void _setBestThumbnail(List<_Thumbnail> list) {
+    for (final _thumbnail in list) {
+      print("Thumbnail: ${_thumbnail.width}x${_thumbnail.height}");
 
-    final videoUrl = "https://youtu.be/${widget.videoId}";
-    if (await canLaunch(videoUrl)) {
-      await launch(videoUrl);
+      if (thumbnail == null || thumbnail.width < _thumbnail.width) {
+        thumbnail = _thumbnail;
+      }
+
+      if (!aspectRatioFromStream &&
+          _thumbnail.width > 0 &&
+          _thumbnail.height > 0) {
+        aspectRatio = _thumbnail.width / _thumbnail.height;
+      }
     }
   }
 }
@@ -205,13 +298,13 @@ class _Stream {
   final String url;
   final int width;
 
-  _Stream({this.height, this.quality, this.type, this.url, this.width});
+  _Stream({this.height = 0, this.quality, this.type, this.url, this.width = 0});
 }
 
 class _Thumbnail {
-  final int height;
+  final double height;
   final String url;
-  final int width;
+  final double width;
 
   _Thumbnail({this.height, this.url, this.width});
 }
