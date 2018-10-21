@@ -50,18 +50,40 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
         data: Theme.of(context).copyWith(
           accentColor: youtubeRed,
         ),
-        child: AspectRatio(
-          aspectRatio: aspectRatio,
-          child: isShowingVideoPlayer
-              ? VideoPlayer(
-                  stream.url,
-                  onDismissed: () =>
-                      setState(() => isShowingVideoPlayer = false),
-                )
-              : !hasCompletedFetching
-                  ? placeholder
-                  : thumbnail != null ? _buildThumbnail() : null,
-        ),
+        child: Column(children: <Widget>[
+          AspectRatio(
+            aspectRatio: aspectRatio,
+            child: isShowingVideoPlayer
+                ? VideoPlayer(
+                    stream.url,
+                    onDismissed: () =>
+                        setState(() => isShowingVideoPlayer = false),
+                  )
+                : !hasCompletedFetching
+                    ? placeholder
+                    : thumbnail != null ? _buildThumbnail() : null,
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: youtubeRed,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(5.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Expanded(
+                    child: GestureDetector(
+                      child: Text(videoUrl),
+                      onTap: _actionLaunchUrl,
+                    ),
+                  ),
+                  Text(stream?.quality ?? ''),
+                ],
+              ),
+            ),
+          ),
+        ]),
       );
 
   void fetch() async {
@@ -108,28 +130,6 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
                       size: min(bc.maxHeight, bc.maxWidth) / 2,
                     ),
               ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                  padding: const EdgeInsets.all(5.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Expanded(
-                        child: GestureDetector(
-                          child: Text(
-                            videoUrl,
-                            style: DefaultTextStyle.of(context)
-                                .style
-                                .copyWith(color: youtubeRed),
-                          ),
-                          onTap: _actionLaunchUrl,
-                        ),
-                      ),
-                      Text(stream?.quality ?? ''),
-                    ],
-                  )),
             ),
           ],
         ),
