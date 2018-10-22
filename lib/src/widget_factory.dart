@@ -112,7 +112,10 @@ class WidgetFactory extends core.WidgetFactory {
 
   core.BuildOp tagIframeYouTube(String videoId) => core.BuildOp(
         onProcess: (_, addWidgets, __) {
-          final w = wrapPadding(YouTubePlayer(videoId), config.imagePadding);
+          final w = wrapPadding(
+            buildYouTubeTheme(context, YouTubePlayer(videoId)),
+            config.imagePadding,
+          );
           if (w != null) addWidgets(<Widget>[w]);
         },
       );

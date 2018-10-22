@@ -7,6 +7,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'video_player.dart';
 
+const kYouTubeRed = const Color.fromRGBO(204, 24, 30, 1.0);
+
+Theme buildYouTubeTheme(BuildContext context, Widget child) => Theme(
+      data: Theme.of(context).copyWith(
+        accentColor: kYouTubeRed,
+        highlightColor: Colors.white,
+      ),
+      child: child,
+    );
+
 class YouTubePlayer extends StatefulWidget {
   final double aspectRatio;
   final String videoId;
@@ -37,8 +47,6 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
 
   String get videoUrl => "https://youtu.be/${widget.videoId}";
 
-  Color get youtubeRed => const Color.fromRGBO(204, 24, 30, 1.0);
-
   @override
   void initState() {
     super.initState();
@@ -46,11 +54,8 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
   }
 
   @override
-  Widget build(BuildContext context) => Theme(
-        data: Theme.of(context).copyWith(
-          accentColor: youtubeRed,
-        ),
-        child: Column(children: <Widget>[
+  Widget build(BuildContext context) => Column(
+        children: <Widget>[
           AspectRatio(
             aspectRatio: aspectRatio,
             child: isShowingVideoPlayer
@@ -63,27 +68,32 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
                     ? placeholder
                     : thumbnail != null ? _buildThumbnail() : null,
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: youtubeRed,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(5.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Expanded(
-                    child: GestureDetector(
-                      child: Text(videoUrl),
-                      onTap: _actionLaunchUrl,
+          DefaultTextStyle(
+            style: DefaultTextStyle.of(context).style.copyWith(
+                  color: Theme.of(context).highlightColor,
+                ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).accentColor,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Expanded(
+                      child: GestureDetector(
+                        child: Text(videoUrl),
+                        onTap: _actionLaunchUrl,
+                      ),
                     ),
-                  ),
-                  Text(stream?.quality ?? ''),
-                ],
+                    Text(stream?.quality ?? ''),
+                  ],
+                ),
               ),
             ),
           ),
-        ]),
+        ],
       );
 
   void fetch() async {

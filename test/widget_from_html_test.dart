@@ -122,6 +122,7 @@ void main() {
   src="https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=1&origin=http://example.com"
   frameborder="0"></iframe>""";
     final explained = await explain(tester, html);
-    expect(explained, equals('[Padding:(10,0,0,0),child=[YouTubePlayer:]]'));
+    expect(explained,
+        equals('[Padding:(10,0,0,0),child=[Theme:child=[YouTubePlayer:]]]'));
   });
 }
