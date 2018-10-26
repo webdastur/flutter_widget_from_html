@@ -127,10 +127,12 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
   Widget _buildThumbnail() => GestureDetector(
         child: Stack(
           children: <Widget>[
-            CachedNetworkImage(
-              imageUrl: thumbnail.url,
-              fit: BoxFit.cover,
-              placeholder: placeholder,
+            Positioned.fill(
+              child: CachedNetworkImage(
+                imageUrl: thumbnail.url,
+                fit: BoxFit.fitWidth,
+                placeholder: placeholder,
+              ),
             ),
             Positioned.fill(
               child: LayoutBuilder(
