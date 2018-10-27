@@ -1,12 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'video_player.dart';
 
+final kOgImageRegExp = RegExp(r'<meta property="og:image" content="([^"]+)">');
 const kYouTubeRed = const Color.fromRGBO(204, 24, 30, 1.0);
 
 Theme buildYouTubeTheme(BuildContext context, Widget child) => Theme(
@@ -97,13 +99,15 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
       );
 
   void fetch() async {
+    final cacheManager = await CacheManager.getInstance();
+
     // we are using an unofficial YouTube api, it may die without notice
     await Future.wait([
-      http
-          .get('http://www.youtube.com/get_video_info?' +
+      cacheManager
+          .getFile('http://www.youtube.com/get_video_info?' +
               "html5=1&video_id=${widget.videoId}")
           .then(_fetchOnGetVideoInfo),
-      http.get(videoUrl).then(_fetchOnHtml),
+      cacheManager.getFile(videoUrl).then(_fetchOnHtml),
     ]);
 
     if (mounted) setState(() => hasCompletedFetching = true);
@@ -148,10 +152,10 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
         onTap: _actionShowVideoPlayerOrLaunchUrl,
       );
 
-  void _fetchOnGetVideoInfo(http.Response response) {
+  void _fetchOnGetVideoInfo(File file) {
     if (!mounted) return;
 
-    final params = Uri.splitQueryString(response.body);
+    final params = Uri.splitQueryString(file.readAsStringSync());
     if (params.containsKey('player_response') &&
         _parsePlayerResponse(params['player_response'])) {
       return;
@@ -162,11 +166,11 @@ class _YouTubePlayerState extends State<YouTubePlayer> {
     }
   }
 
-  void _fetchOnHtml(http.Response response) {
+  void _fetchOnHtml(File file) {
     if (!mounted) return;
 
-    final match = RegExp(r'<meta property="og:image" content="([^"]+)">')
-        .firstMatch(response.body);
+    final html = file.readAsStringSync();
+    final match = kOgImageRegExp.firstMatch(html);
     if (match == null) return;
 
     _setBestThumbnail(<_Thumbnail>[
