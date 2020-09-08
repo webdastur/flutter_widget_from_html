@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
+
 import 'package:chewie/chewie.dart' as lib;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart' as lib;
 
@@ -48,7 +51,10 @@ class VideoPlayer extends StatefulWidget {
         super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _VideoPlayerState();
+  State<VideoPlayer> createState() =>
+      (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))
+          ? _VideoPlayerPlaceholder()
+          : _VideoPlayerState();
 }
 
 class _VideoPlayerState extends State<VideoPlayer> {
@@ -123,4 +129,14 @@ class _Controller extends lib.ChewieController {
 
     videoPlayerController.addListener(listener);
   }
+}
+
+class _VideoPlayerPlaceholder extends State<VideoPlayer> {
+  @override
+  Widget build(BuildContext _) => AspectRatio(
+      aspectRatio: widget.aspectRatio,
+      child: Container(
+        child: Center(child: Text('VideoPlayer')),
+        color: Color.fromRGBO(0, 0, 0, .5),
+      ));
 }

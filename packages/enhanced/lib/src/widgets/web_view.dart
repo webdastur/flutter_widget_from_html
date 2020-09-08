@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'web_view/fallback.dart'
@@ -66,5 +69,18 @@ class WebView extends StatefulWidget {
         super(key: key);
 
   @override
-  State<WebView> createState() => WebViewState();
+  State<WebView> createState() =>
+      (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))
+          ? _WebViewPlaceholder()
+          : WebViewState();
+}
+
+class _WebViewPlaceholder extends State<WebView> {
+  @override
+  Widget build(BuildContext _) => AspectRatio(
+      aspectRatio: widget.aspectRatio,
+      child: Container(
+        child: Center(child: Text('WebView')),
+        color: Color.fromRGBO(0, 0, 0, .5),
+      ));
 }
